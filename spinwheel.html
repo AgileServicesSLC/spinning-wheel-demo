@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Spin the Wheel</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+    }
+    #wheelCanvas {
+      display: block;
+      margin: auto;
+      background-color: #222;
+    }
+    #spinButton {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 1em 2em;
+      font-size: 20px;
+      cursor: pointer;
+      background-color: #29a;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+    #resultScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 4em;
+      display: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button id="spinButton">SPIN</button>
+  <canvas id="wheelCanvas" width="600" height="600"></canvas>
+  <div id="resultScreen"></div>
+
+  <audio id="spinSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
+
+  <script>
+    const options = ["One", "Two", "Three", "Four", "Five", "Six"];
+    const numberOfSlots = options.length % 2 === 0 ? options.length : options.length + 1;
+    const colors = ["#e74c3c", "#3498db"];
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const spinSound = document.getElementById('spinSound');
+    const resultScreen = document.getElementById('resultScreen');
+    let angle = 0;
+    let spinning = false;
+
+    function drawWheel() {
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(centerX, centerY) - 10;
+      const arcSize = 2 * Math.PI / numberOfSlots;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numberOfSlots; i++) {
+        const start = angle + i * arcSize;
+        const end = start + arcSize;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, start, end);
+        ctx.fillStyle = colors[i % 2];
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(start + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "white";
+        ctx.font = "16px Arial";
+        ctx.fillText(options[i % options.length], radius - 10, 5);
+        ctx.restore();
+      }
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+      spinSound.play();
+      let spinAngle = Math.random() * 360 + 720; // spin at least twice
+      let current = 0;
+      const duration = 3000;
+      const start = performance.now();
+
+      function animate(now) {
+        let elapsed = now - start;
+        if (elapsed >= duration) {
+          spinning = false;
+          const finalAngle = (angle + spinAngle) % 360;
+          const pickedIndex = Math.floor((numberOfSlots - (finalAngle / 360 * numberOfSlots)) % numberOfSlots);
+          const picked = options[pickedIndex % options.length];
+          showResult(picked);
+          return;
+        }
+        const easeOut = 1 - Math.pow(1 - elapsed / duration, 3);
+        angle += (spinAngle * easeOut - current);
+        current = spinAngle * easeOut;
+        drawWheel();
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showResult(result) {
+      resultScreen.textContent = result;
+      resultScreen.style.display = "flex";
+    }
+
+    document.getElementById('spinButton').addEventListener('click', spinWheel);
+    resultScreen.addEventListener('click', () => {
+      resultScreen.style.display = "none";
+      angle = 0;
+      drawWheel();
+    });
+
+    drawWheel();
+  </script>
+</body>
+</html>
